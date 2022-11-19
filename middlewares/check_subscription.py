@@ -11,7 +11,7 @@ class SubscriptionMiddleware(BaseMiddleware):
     """
 
     async def on_process_message(self, message: types.Message, data: dict):
-        user = await bot.get_chat_member(CHANNEL_ID, 875587704)
+        user = await bot.get_chat_member(CHANNEL_ID, message.from_user.id)
 
         if not user.is_chat_member():
             await self.send_link(message)
@@ -19,4 +19,4 @@ class SubscriptionMiddleware(BaseMiddleware):
 
 
     async def send_link(self, message: types.Message):
-        await message.reply(f"Присоединяйтесь на наш канал: @WebAppGames")
+        await message.reply(f"Присоединяйтесь на наш канал: @the_parse_test")
