@@ -17,7 +17,11 @@ async def bot_start(message: types.Message, state: FSMContext):
     captcha.generate_captcha()
 
     with open(captcha.path, 'rb') as photo:
-        await message.answer_photo(photo, reply_markup=types.ReplyKeyboardRemove())
+        await message.answer_photo(
+            photo,
+            caption="⚠️ Чтоб продолжить использовать бота, Вам необходимо решить капчу.", 
+            reply_markup=types.ReplyKeyboardRemove()
+        )
         os.remove(captcha.path)
     
     async with state.proxy() as data:
@@ -38,4 +42,4 @@ async def bot_start(message: types.Message, state: FSMContext):
         await state.finish()
 
     else:
-        await message.answer("Неверно!")
+        await message.answer("Не правильно! Повторите попытку или обновите командой /start")

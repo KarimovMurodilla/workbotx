@@ -1,5 +1,7 @@
 from aiogram import types
 
+from utils.misc.button_indicator import indicator
+
 
 def payment():
     menu = types.InlineKeyboardMarkup()
@@ -21,5 +23,34 @@ def show_payment(bill_id, url, price):
 
 def subscribed():
     menu = types.InlineKeyboardMarkup()
-    btn1 = types.InlineKeyboardButton(text="Подписался", callback_data='subscribed')
-    
+    btn = types.InlineKeyboardButton(text="Подписался", callback_data='subscribed')
+    menu.add(btn)
+
+    return menu
+
+
+def continue_btn():
+    menu = types.InlineKeyboardMarkup()
+    btn = types.InlineKeyboardButton(text="Продолжить", callback_data='continue')
+    menu.add(btn)
+
+    return menu
+
+
+def confirm_btn():
+    menu = types.InlineKeyboardMarkup()
+    btn = types.InlineKeyboardButton(text="Подтвердить", callback_data='confirm')
+    menu.add(btn)
+
+    return menu
+
+
+
+# ADMIN
+def admin():
+    menu = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton(text = indicator("Вывести"), callback_data="withdraw_status")
+    btn2 = types.InlineKeyboardButton(text = indicator("Пополнить"), callback_data="top_up_status")
+    menu.add(btn1, btn2)
+
+    return menu

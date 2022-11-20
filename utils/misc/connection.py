@@ -3,7 +3,7 @@ from sqlalchemy import update, delete
 from sqlalchemy.orm import sessionmaker
 
 from utils.db_api.base import Base
-from utils.db_api.models import Users
+from utils.db_api.models import Admin, Users
 
 db_string = r"sqlite:///database.db"
 db = create_engine(db_string)  
@@ -40,3 +40,33 @@ class Database:
             values(balance = new_balance)
             )
         session.commit()
+    
+
+    # ----ADMIN----
+    def get_status(self, name):
+        """Some docs"""
+        panel = session.query(Admin).filter(Admin.name == name).first()
+        return panel.status
+
+
+    def update_status(self, name):
+        """Some docs"""
+        d = {
+            '✅': '❌',
+            '❌': '✅'
+        }
+        current = self.get_status(name)
+
+        session.execute(
+            update(Admin).filter(Admin.name == name).
+            values(status = d[current])
+            )
+        session.commit()
+
+    
+    def get_sum_balance(self):
+        """Some docs"""
+        users = session.query(Users).all()
+        users_sum = sum([x.balance for x in users])
+
+        return users_sum

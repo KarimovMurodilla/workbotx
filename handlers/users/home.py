@@ -46,42 +46,68 @@ async def callback_withdraw(c: types.CallbackQuery, state: FSMContext):
     if balance > 0.0:
         await c.answer()
         await WithDraw.step1.set()
-        await c.message.answer("На  какую сумму Вы хотите сделать вывод?", 
-            reply_markup = keyboard_buttons.cancel())
+        await c.message.answer(
+            "<b>🔔 Уведомление:</b>\n\n"
+            "Вы можете вывести от <code>500</code> до <code>2500</code> руб (За день). Комиссия Qiwi составляет - <code>2% + 50.0 ₽</code>", 
+                reply_markup = inline_buttons.continue_btn())
     
     else:
         await c.answer(show_alert = True, text = "⚠️ Ошибка:\n\n"
 						"У вас недостаточно средств")
 
 
-@dp.message_handler(state = WithDraw.step1)
-async def home(message: types.Message, state: FSMContext):
+@dp.callback_query_handler(lambda c: c.data == 'continue', state = WithDraw.step1)
+async def continue_handler(c: types.CallbackQuery, state: FSMContext):
+    await c.message.answer("Отправьте мне сумму которую хотите вывести.")
+    await WithDraw.next()
+
+
+@dp.message_handler(state = WithDraw.step2)
+async def process_withdraw_2(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     balance = db.get_user_balance(user_id)
     
     if message.text.isdigit():
-        if int(message.text) <= balance:
-            async with state.proxy() as data:
-                data['user_money'] = message.text
-                
-                await WithDraw.step2.set()
-                await message.answer("Отправьте мне номер карты для вывода средства на ней.")
-        else:
-            await message.answer("⚠️ Ошибка:\n\n"
-								 "У вас недостаточно средств")
+        async with state.proxy() as data:
+            data['user_money'] = message.text
+            
+            await WithDraw.step3.set()
+            await message.answer("Отправьте мне номер карты для вывода средства на ней.", reply_markup=keyboard_buttons.cancel())
     else:
         await message.answer("⚠️ Ошибка:\n\n"
 							 "Вводите только цифрами!")
 
 
-@dp.message_handler(state = WithDraw.step2)
-async def home(message: types.Message, state: FSMContext):
+@dp.message_handler(state = WithDraw.step3)
+async def process_withdraw_3(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        user_id = message.from_user.id
-        recipient = message.text
+        data['recipient'] = message.text
+        user_money = data.get('user_money')
+    
+    fee_with_comission = int(user_money)+int(user_money)/100*2+50
+
+    await message.answer(
+        "<b>Информация об выводе</b>\n"
+        f"<b>К списанию:</b> <code>{fee_with_comission}₽</code>\n"
+        f"<b>К зачислению:</b> <code>{user_money}₽</code>\n"
+        f"<b>На:</b> <code>{message.text}</code>",
+            reply_markup=inline_buttons.confirm_btn()
+    )
+    await WithDraw.next()
+
+
+@dp.callback_query_handler(lambda c: c.data == 'confirm', state = WithDraw.step4)
+async def continue_handler(c: types.CallbackQuery, state: FSMContext):
+    async with state.proxy() as data:
+        user_id = c.from_user.id
+        recipient = data.get('recipient')
         user_money = data['user_money']
         comment = (f"{user_id}_{random.randint(1000, 9999)}")
-        
+
+        balance = db.get_user_balance(user_id)
+        fee_with_commission = int(user_money)+int(user_money)/100*2+50
+
+    if int(fee_with_commission) <= balance:        
         prv_id = Payment.get_card_system(recipient)
         payment_data = {'sum': user_money,
                         'to_card': recipient,
@@ -91,20 +117,20 @@ async def home(message: types.Message, state: FSMContext):
         try:
             status_transaction = answer_from_qiwi["transaction"]["state"]
             if status_transaction['code'] == "Accepted":
-                today = datetime.datetime.today()
-                fee_with_commission = int(user_money)+int(user_money)/100*2+50
-                balance = db.get_user_balance(user_id)
                 new_balance = balance - fee_with_commission
                 db.update_balance(user_id, new_balance)
-                await message.answer("🔔 Уведомление:\n\nВаша заявка принята в обработку!\nОжидайте перевода в течении 24х часов.")
+                await c.message.answer("🔔 Уведомление:\n\nВаша заявка принята в обработку!\nОжидайте перевода в течении 24х часов.")
         
         except Exception as e:
             print(answer_from_qiwi)
             print(e, type(e))
-            await message.answer("⚠️ Ошибка:\n\n"
+            await c.message.answer("⚠️ Ошибка:\n\n"
 				"Пожалуйста проверьте карта/номер получателя !")
             
             await state.finish()
+    else:
+        await c.message.answer("⚠️ Ошибка:\n\n"
+                            "У вас недостаточно средств")
 
 
 
@@ -156,7 +182,12 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
             await state.finish()
         
         else:
-            await c.answer(show_alert = True, text = "❗️Вы не оплатили счет!")
+            await c.answer(
+                show_alert = True, 
+                text  = "⚠️ Ошибка:\n\n" 
+                        "Оплата не прошла или же вы не оплатили счёт, повторите попытку или обратитесь в поддержку бота."
+            
+            )
     
     except Exception as e:
         print(e)
