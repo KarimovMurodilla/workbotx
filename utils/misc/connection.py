@@ -52,8 +52,8 @@ class Database:
     def update_status(self, name):
         """Some docs"""
         d = {
-            '✅': '❌',
-            '❌': '✅'
+            '🟢': '🔴',
+            '🔴': '🟢'
         }
         current = self.get_status(name)
 

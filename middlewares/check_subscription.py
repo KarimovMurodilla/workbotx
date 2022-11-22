@@ -11,17 +11,19 @@ class SubscriptionMiddleware(BaseMiddleware):
     Checker subscription chat middleware
     """
 
-    async def on_process_message(self, message: types.Message, data: dict):
-        if message.chat.type != 'private':
-            raise CancelHandler()
+    # async def on_process_message(self, message: types.Message, data: dict):
+    #     if message.chat.type != 'private':
+    #         raise CancelHandler()
 
-        
+
 
 
     async def on_pre_process_update(self, update: types.Update, data: dict):
         user = None
 
         if update.callback_query:
+            if update.callback_query.message.chat.type != 'private':
+                raise CancelHandler()
             user = update.callback_query.from_user
 
 
@@ -33,9 +35,9 @@ class SubscriptionMiddleware(BaseMiddleware):
                 await update.callback_query.answer("Данная функция не работает!", show_alert=True)
                 raise CancelHandler()
 
-            await update.callback_query.answer()
-
         elif update.message:
+            if update.message.chat.type != 'private':
+                raise CancelHandler()
             user = update.message.from_user
 
         if user is None:
@@ -49,3 +51,6 @@ class SubscriptionMiddleware(BaseMiddleware):
             else:
                 await update.message.answer(f"Присоединяйтесь на наш чат: @the_parse_test", reply_markup=subscribed())
             raise CancelHandler()
+        
+        if update.callback_query:
+            await update.callback_query.answer()

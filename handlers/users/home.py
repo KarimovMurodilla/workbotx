@@ -38,12 +38,12 @@ async def home(message: types.Message):
 
 
 # ----WithDraw---
-@dp.callback_query_handler(lambda c: c.data == 'withdraw')
+@dp.callback_query_handler(lambda c: c.data == 'withdraw', state='*')
 async def callback_withdraw(c: types.CallbackQuery, state: FSMContext):
     user_id = c.from_user.id
     balance = db.get_user_balance(user_id)
     
-    if balance > 0.0:
+    if balance >= 0.0:
         await c.answer()
         await WithDraw.step1.set()
         await c.message.answer(
@@ -137,8 +137,6 @@ async def continue_handler(c: types.CallbackQuery, state: FSMContext):
 # ----Top Up----
 @dp.callback_query_handler(lambda c: c.data == 'top_up')
 async def callback_top_up(c: types.CallbackQuery, state: FSMContext):
-	await c.answer()
-
 	await TopUp.step1.set()
 	await c.message.answer("Отправьте сумму на которую хотите пополнить баланс.", 
 			reply_markup = keyboard_buttons.cancel())
